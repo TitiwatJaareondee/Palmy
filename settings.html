@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ตั้งค่าระบบ | Pormormovi3</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="assets/css/responsive.css">
+</head>
+<body>
+    <div class="app-container">
+        <main class="main-content">
+            <div class="dashboard-grid" style="grid-template-columns: 1fr 1fr;">
+                <!-- General Settings -->
+                <div class="card fade-in">
+                    <h4 style="margin-bottom: 1.5rem; display: flex; align-items: center; gap: 10px;">
+                        <span style="width: 24px;">${Icons.paw}</span>
+                        ตั้งค่าร้านค้า
+                    </h4>
+                    <form id="settings-form">
+                        <div class="input-group">
+                            <label for="shopName">ชื่อร้านค้า</label>
+                            <input type="text" id="shopName" required>
+                        </div>
+                        <div class="input-group">
+                            <label for="currency">สกุลเงิน</label>
+                            <select id="currency">
+                                <option value="THB">THB (฿)</option>
+                                <option value="USD">USD ($)</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label for="appPresets">รายการแอป (คั่นด้วยเครื่องหมาย ,)</label>
+                            <textarea id="appPresets" rows="4"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="width: 100%;">บันทึกการตั้งค่า</button>
+                    </form>
+                </div>
+
+                <!-- Account Settings -->
+                <div class="card fade-in" style="animation-delay: 0.1s;">
+                    <h4 style="margin-bottom: 1.5rem; display: flex; align-items: center; gap: 10px;">
+                        <span style="width: 24px;">${Icons.kuromi}</span>
+                        ความปลอดภัย
+                    </h4>
+                    <form id="password-form">
+                        <div class="input-group">
+                            <label for="currentPassword">รหัสผ่านปัจจุบัน</label>
+                            <input type="password" id="currentPassword" required>
+                        </div>
+                        <div class="input-group">
+                            <label for="newPassword">รหัสผ่านใหม่</label>
+                            <input type="password" id="newPassword" required>
+                        </div>
+                        <div class="input-group">
+                            <label for="confirmPassword">ยืนยันรหัสผ่านใหม่</label>
+                            <input type="password" id="confirmPassword" required>
+                        </div>
+                        <button type="submit" class="btn btn-secondary" style="width: 100%;">อัปเดตรหัสผ่าน</button>
+                    </form>
+                </div>
+
+                <!-- Theme Settings -->
+                <div class="card fade-in" style="animation-delay: 0.2s; grid-column: span 2;">
+                    <h4 style="margin-bottom: 1.5rem;">ธีมที่ใช้งาน</h4>
+                    <div style="display: flex; gap: 20px;">
+                        <div class="theme-option" id="theme-kuromi" style="flex: 1; padding: 1.5rem; border-radius: 16px; border: 3px solid #1A1A2E; cursor: pointer; text-align: center; background: #1A1A2E; color: #C9B1FF;">
+                            <div style="width: 50px; margin: 0 auto 1rem;">${Icons.kuromi}</div>
+                            <strong>Kuromi Mode</strong>
+                        </div>
+                        <div class="theme-option" id="theme-melody" style="flex: 1; padding: 1.5rem; border-radius: 16px; border: 3px solid #FFD6E0; cursor: pointer; text-align: center; background: #FFF5F7; color: #FF8FAB;">
+                            <div style="width: 50px; margin: 0 auto 1rem;">${Icons.melody}</div>
+                            <strong>My Melody Mode</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Danger Zone -->
+                <div class="card fade-in" style="animation-delay: 0.3s; border: 2px dashed var(--error); grid-column: span 2;">
+                    <h4 style="margin-bottom: 1rem; color: var(--error);">Danger Zone</h4>
+                    <p style="color: var(--text-muted); margin-bottom: 1.5rem; font-size: 0.85rem;">ระวัง: ข้อมูลที่ลบแล้วไม่สามารถกู้คืนได้</p>
+                    <div style="display: flex; gap: 1rem;">
+                        <button id="reset-data" class="btn" style="background: var(--error); color: white; font-size: 0.8rem;">ล้างข้อมูลธุรกรรม</button>
+                        <button id="reset-all" class="btn" style="background: none; border: 1px solid var(--error); color: var(--error); font-size: 0.8rem;">Factory Reset</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="assets/js/db.js"></script>
+    <script src="assets/js/icons.js"></script>
+    <script src="assets/js/theme-engine.js"></script>
+    <script src="assets/js/utils.js"></script>
+    <script src="assets/js/auth.js"></script>
+    <script src="assets/js/components.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            Auth.checkSession();
+            Components.injectLayout();
+            loadSettings();
+            setupForms();
+            highlightCurrentTheme();
+        });
+
+        function loadSettings() {
+            const settings = DB.settings.get();
+            document.getElementById('shopName').value = settings.shopName;
+            document.getElementById('currency').value = settings.currency;
+            document.getElementById('appPresets').value = settings.appPresets.join(', ');
+        }
+
+        function highlightCurrentTheme() {
+            const current = ThemeEngine.getCurrent();
+            document.querySelectorAll('.theme-option').forEach(opt => opt.style.boxShadow = 'none');
+            const active = document.getElementById(`theme-${current}`);
+            active.style.boxShadow = `0 0 0 5px var(--primary)`;
+        }
+
+        function setupForms() {
+            document.getElementById('settings-form').onsubmit = (e) => {
+                e.preventDefault();
+                const presets = document.getElementById('appPresets').value.split(',').map(s => s.trim()).filter(s => s !== '');
+                DB.settings.update({ shopName: document.getElementById('shopName').value, currency: document.getElementById('currency').value, appPresets: presets });
+                Utils.toast('บันทึกการตั้งค่าสำเร็จ', 'success');
+                setTimeout(() => location.reload(), 1000);
+            };
+
+            document.getElementById('password-form').onsubmit = async (e) => {
+                e.preventDefault();
+                const current = document.getElementById('currentPassword').value;
+                const newPass = document.getElementById('newPassword').value;
+                const confirm = document.getElementById('confirmPassword').value;
+                if (newPass !== confirm) { Utils.toast('รหัสผ่านใหม่ไม่ตรงกัน', 'error'); return; }
+                const session = JSON.parse(sessionStorage.getItem('kuromi_session'));
+                const user = DB.users.getById(session.userId);
+                const currentHash = await Utils.hashPassword(current);
+                if (user.passwordHash !== currentHash) { Utils.toast('รหัสผ่านปัจจุบันไม่ถูกต้อง', 'error'); return; }
+                const newHash = await Utils.hashPassword(newPass);
+                DB.users.update(user.id, { passwordHash: newHash });
+                Utils.toast('เปลี่ยนรหัสผ่านสำเร็จ', 'success');
+                document.getElementById('password-form').reset();
+            };
+
+            document.getElementById('theme-kuromi').onclick = () => { ThemeEngine.setTheme('kuromi'); location.reload(); };
+            document.getElementById('theme-melody').onclick = () => { ThemeEngine.setTheme('melody'); location.reload(); };
+
+            document.getElementById('reset-data').onclick = () => { if (confirm('ลบข้อมูลธุรกรรมทั้งหมด?')) { DB.transactions.clearAll(); Utils.toast('ล้างข้อมูลเรียบร้อย', 'success'); } };
+            document.getElementById('reset-all').onclick = () => { if (confirm('Factory Reset?')) { localStorage.clear(); sessionStorage.clear(); location.href = 'index.html'; } };
+        }
+    </script>
+</body>
+</html>

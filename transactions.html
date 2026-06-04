@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>รายการธุรกรรม | Pormormovi3</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="assets/css/responsive.css">
+</head>
+<body>
+    <div class="app-container">
+        <main class="main-content">
+            <div class="dashboard-grid" style="grid-template-columns: 1fr 2fr;">
+                <!-- Add Transaction Form -->
+                <div class="card fade-in">
+                    <h4 style="margin-bottom: 1.5rem;">เพิ่มรายการใหม่</h4>
+                    <form id="tx-form">
+                        <div class="input-group">
+                            <label for="appName">ชื่อแอป</label>
+                            <input type="text" id="appName" list="app-presets" placeholder="เช่น Netflix, Spotify" required>
+                            <datalist id="app-presets"></datalist>
+                        </div>
+
+                        <div class="input-group">
+                            <label for="category">ประเภท</label>
+                            <select id="category" required>
+                                <option value="subscription_sale">ขาย (Sale)</option>
+                                <option value="expense">ค่าใช้จ่าย (Expense)</option>
+                                <option value="refund">คืนเงิน (Refund)</option>
+                            </select>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                            <div class="input-group">
+                                <label for="sellingPrice">ราคาขาย (฿)</label>
+                                <input type="number" id="sellingPrice" min="0" value="0" step="0.01" required>
+                            </div>
+                            <div class="input-group">
+                                <label for="costPrice">ต้นทุน (฿)</label>
+                                <input type="number" id="costPrice" min="0" value="0" step="0.01" required>
+                            </div>
+                        </div>
+
+                        <div class="input-group">
+                            <label for="quantity">จำนวน</label>
+                            <input type="number" id="quantity" min="1" value="1" required>
+                        </div>
+
+                        <div class="card" style="background: var(--nav-active-bg); border: none; padding: 1rem; margin-bottom: 1.2rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="font-size: 0.9rem; font-weight: 700;">กำไรที่ได้:</span>
+                                <span id="live-profit" style="font-size: 1.2rem; font-weight: 800; color: var(--primary-dark);">฿0.00</span>
+                            </div>
+                        </div>
+
+                        <div class="input-group">
+                            <label for="date">วันที่</label>
+                            <input type="date" id="date" required>
+                        </div>
+
+                        <div class="input-group">
+                            <label for="note">หมายเหตุ (ไม่บังคับ)</label>
+                            <textarea id="note" rows="2" placeholder="ใส่รายละเอียดเพิ่มเติม..."></textarea>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary" style="width: 100%;">บันทึกรายการ (Ctrl+S)</button>
+                    </form>
+                </div>
+
+                <!-- Transactions Table -->
+                <div class="card fade-in" style="animation-delay: 0.2s;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                        <h4>รายการธุรกรรมทั้งหมด</h4>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="text" id="search-tx" placeholder="ค้นหาแอป..." style="padding: 0.5rem 1rem; width: 180px;">
+                            <button id="clear-all-btn" class="btn" style="background: var(--error); color: white; padding: 0.5rem 1rem; font-size: 0.8rem;">ล้างทั้งหมด</button>
+                        </div>
+                    </div>
+                    
+                    <div class="table-responsive">
+                        <table id="tx-table">
+                            <thead>
+                                <tr>
+                                    <th>วันที่</th>
+                                    <th>แอป</th>
+                                    <th>ประเภท</th>
+                                    <th>ราคาขาย</th>
+                                    <th>ต้นทุน</th>
+                                    <th>กำไร</th>
+                                    <th>จัดการ</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Data injected by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div id="confirm-modal" style="display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center;">
+        <div class="card" style="max-width: 400px; text-align: center; border: 4px solid var(--primary);">
+            <div id="modal-icon" style="width: 60px; margin: 0 auto 1.5rem;"></div>
+            <h3 style="margin-bottom: 1rem;">ยืนยันการดำเนินการ?</h3>
+            <p id="confirm-msg" style="margin-bottom: 2rem; color: var(--text-muted);"></p>
+            <div style="display: flex; gap: 1rem; justify-content: center;">
+                <button id="confirm-cancel" class="btn btn-secondary">ยกเลิก</button>
+                <button id="confirm-ok" class="btn" style="background: var(--error); color: white;">ยืนยันลบ</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="assets/js/db.js"></script>
+    <script src="assets/js/icons.js"></script>
+    <script src="assets/js/theme-engine.js"></script>
+    <script src="assets/js/utils.js"></script>
+    <script src="assets/js/auth.js"></script>
+    <script src="assets/js/components.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            Auth.checkSession();
+            Components.injectLayout();
+            initForm();
+            loadTransactions();
+            setupShortcuts();
+            
+            // Inject Modal Icon
+            document.getElementById('modal-icon').innerHTML = ThemeEngine.getCurrent() === 'kuromi' ? Icons.kuromi : Icons.melody;
+        });
+
+        function initForm() {
+            const form = document.getElementById('tx-form');
+            const settings = DB.settings.get();
+            const datalist = document.getElementById('app-presets');
+            document.getElementById('date').valueAsDate = new Date();
+            datalist.innerHTML = settings.appPresets.map(app => `<option value="${app}">`).join('');
+
+            const sellingInput = document.getElementById('sellingPrice');
+            const costInput = document.getElementById('costPrice');
+            const qtyInput = document.getElementById('quantity');
+            const liveProfit = document.getElementById('live-profit');
+
+            const calc = () => {
+                const s = parseFloat(sellingInput.value) || 0;
+                const c = parseFloat(costInput.value) || 0;
+                const q = parseInt(qtyInput.value) || 1;
+                const profit = (s * q) - (c * q);
+                liveProfit.textContent = Utils.formatCurrency(profit);
+                liveProfit.style.color = profit >= 0 ? 'var(--primary-dark)' : 'var(--error)';
+                saveDraft();
+            };
+
+            [sellingInput, costInput, qtyInput].forEach(el => el.addEventListener('input', calc));
+
+            const draft = JSON.parse(localStorage.getItem('tx_draft'));
+            if (draft) {
+                Object.keys(draft).forEach(key => {
+                    const el = document.getElementById(key);
+                    if (el) el.value = draft[key];
+                });
+                calc();
+            }
+
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                saveTransaction();
+            });
+        }
+
+        function saveDraft() {
+            const fields = ['appName', 'category', 'sellingPrice', 'costPrice', 'quantity', 'date', 'note'];
+            const draft = {};
+            fields.forEach(id => draft[id] = document.getElementById(id).value);
+            localStorage.setItem('tx_draft', JSON.stringify(draft));
+        }
+
+        function saveTransaction() {
+            const tx = {
+                appName: document.getElementById('appName').value,
+                category: document.getElementById('category').value,
+                sellingPrice: parseFloat(document.getElementById('sellingPrice').value),
+                costPrice: parseFloat(document.getElementById('costPrice').value),
+                quantity: parseInt(document.getElementById('quantity').value),
+                date: document.getElementById('date').value,
+                note: document.getElementById('note').value,
+                createdBy: JSON.parse(sessionStorage.getItem('kuromi_session')).username
+            };
+
+            DB.transactions.add(tx);
+            Utils.toast('บันทึกรายการสำเร็จ', 'success');
+            localStorage.removeItem('tx_draft');
+            document.getElementById('tx-form').reset();
+            document.getElementById('date').valueAsDate = new Date();
+            document.getElementById('live-profit').textContent = '฿0.00';
+            loadTransactions();
+        }
+
+        function loadTransactions() {
+            const txs = DB.transactions.getAll();
+            const searchTerm = document.getElementById('search-tx').value.toLowerCase();
+            const tableBody = document.querySelector('#tx-table tbody');
+            const filtered = txs.filter(t => t.appName.toLowerCase().includes(searchTerm)).reverse();
+
+            if (filtered.length === 0) {
+                const icon = ThemeEngine.getCurrent() === 'kuromi' ? Icons.kuromi : Icons.melody;
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="7" style="text-align:center; padding: 4rem; color: var(--text-muted);">
+                            <div style="width: 60px; margin: 0 auto 1.5rem; opacity: 0.2;">${icon}</div>
+                            ไม่พบรายการธุรกรรม
+                        </td>
+                    </tr>`;
+            } else {
+                tableBody.innerHTML = filtered.map(t => `
+                    <tr>
+                        <td style="font-size: 0.8rem; color: var(--text-muted);">${Utils.formatDate(t.date)}</td>
+                        <td style="font-weight: 700;">${t.appName}</td>
+                        <td><span class="badge badge-${t.category.split('_')[1] || t.category}">${t.category.replace('subscription_', '')}</span></td>
+                        <td>${Utils.formatCurrency(t.sellingPrice)}</td>
+                        <td>${Utils.formatCurrency(t.costPrice)}</td>
+                        <td style="font-weight: 800; color: ${t.profit >= 0 ? 'var(--primary-dark)' : 'var(--error)'};">
+                            ${Utils.formatCurrency(t.profit)}
+                        </td>
+                        <td>
+                            <button onclick="deleteTx('${t.id}')" class="btn" style="padding: 6px 12px; font-size: 0.75rem; background: var(--bg); color: var(--error); border: 1px solid var(--error);">ลบ</button>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+        }
+
+        document.getElementById('search-tx').addEventListener('input', loadTransactions);
+
+        let pendingDeleteId = null;
+        function deleteTx(id) {
+            pendingDeleteId = id;
+            showConfirm('คุณแน่ใจหรือไม่ว่าต้องการลบรายการนี้?');
+        }
+
+        document.getElementById('clear-all-btn').addEventListener('click', () => {
+            pendingDeleteId = 'all';
+            showConfirm('ล้างรายการ "ทั้งหมด"? ทุกข้อมูลจะหายไปถาวร');
+        });
+
+        function showConfirm(msg) {
+            document.getElementById('confirm-msg').textContent = msg;
+            document.getElementById('confirm-modal').style.display = 'flex';
+        }
+
+        document.getElementById('confirm-cancel').onclick = () => document.getElementById('confirm-modal').style.display = 'none';
+
+        document.getElementById('confirm-ok').onclick = () => {
+            if (pendingDeleteId === 'all') {
+                DB.transactions.clearAll();
+                Utils.toast('ล้างข้อมูลทั้งหมดแล้ว', 'success');
+            } else {
+                DB.transactions.delete(pendingDeleteId);
+                Utils.toast('ลบรายการสำเร็จ', 'success');
+            }
+            document.getElementById('confirm-modal').style.display = 'none';
+            loadTransactions();
+        };
+
+        function setupShortcuts() {
+            window.addEventListener('keydown', (e) => {
+                if (e.ctrlKey && e.key === 's') { e.preventDefault(); document.getElementById('tx-form').dispatchEvent(new Event('submit')); }
+                if (e.ctrlKey && e.key === 'n') { e.preventDefault(); document.getElementById('appName').focus(); }
+            });
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>แดชบอร์ด | Pormormovi3</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="assets/css/responsive.css">
+</head>
+<body>
+    <div class="app-container">
+        <main class="main-content">
+            <!-- Stats Grid -->
+            <div class="stats-grid">
+                <div class="card stat-card fade-in" style="animation-delay: 0.1s;">
+                    <p class="stat-label">รายได้รวม (เดือนนี้)</p>
+                    <p class="stat-value" id="revenue-month">฿0.00</p>
+                    <p style="font-size: 0.75rem; color: var(--success);">↑ 0% จากเดือนที่แล้ว</p>
+                </div>
+                <div class="card stat-card fade-in" style="animation-delay: 0.2s;">
+                    <p class="stat-label">ต้นทุนรวม (เดือนนี้)</p>
+                    <p class="stat-value" id="cost-month">฿0.00</p>
+                </div>
+                <div class="card stat-card fade-in" style="animation-delay: 0.3s;">
+                    <p class="stat-label">กำไรสุทธิ (เดือนนี้)</p>
+                    <p class="stat-value" id="profit-month" style="color: var(--primary-dark);">฿0.00</p>
+                </div>
+                <div class="card stat-card fade-in" style="animation-delay: 0.4s;">
+                    <p class="stat-label">ธุรกรรมทั้งหมด</p>
+                    <p class="stat-value" id="total-tx">0</p>
+                </div>
+            </div>
+
+            <div class="dashboard-grid">
+                <!-- Profit Chart -->
+                <div class="card fade-in" style="animation-delay: 0.5s;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                        <h4>แนวโน้มกำไร (7 วันล่าสุด)</h4>
+                        <div class="icon-svg" style="color: var(--primary); opacity: 0.5;">${Icons.star}</div>
+                    </div>
+                    <canvas id="profitChart"></canvas>
+                </div>
+
+                <!-- Recent Transactions -->
+                <div class="card fade-in" style="animation-delay: 0.6s;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                        <h4>รายการล่าสุด</h4>
+                        <a href="transactions.html" style="font-size: 0.8rem; color: var(--primary); text-decoration: none; font-weight: 700;">ดูทั้งหมด</a>
+                    </div>
+                    <div class="table-responsive">
+                        <table id="recent-tx-table">
+                            <thead>
+                                <tr>
+                                    <th>แอป</th>
+                                    <th>ประเภท</th>
+                                    <th>กำไร</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Data injected by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="assets/js/db.js"></script>
+    <script src="assets/js/icons.js"></script>
+    <script src="assets/js/theme-engine.js"></script>
+    <script src="assets/js/utils.js"></script>
+    <script src="assets/js/auth.js"></script>
+    <script src="assets/js/components.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            Auth.checkSession();
+            Components.injectLayout();
+            loadDashboardData();
+        });
+
+        function loadDashboardData() {
+            const txs = DB.transactions.getAll();
+            const now = new Date();
+            const thisMonth = now.getMonth();
+            const thisYear = now.getFullYear();
+
+            const monthTxs = txs.filter(t => {
+                const d = new Date(t.date);
+                return d.getMonth() === thisMonth && d.getFullYear() === thisYear;
+            });
+
+            let revenue = 0, cost = 0, profit = 0;
+            monthTxs.forEach(t => {
+                if (t.category === 'subscription_sale') {
+                    revenue += (t.sellingPrice * t.quantity);
+                    cost += (t.costPrice * t.quantity);
+                    profit += t.profit;
+                } else if (t.category === 'expense') {
+                    cost += (t.costPrice * t.quantity);
+                    profit -= (t.costPrice * t.quantity);
+                } else if (t.category === 'refund') {
+                    revenue -= (t.sellingPrice * t.quantity);
+                    profit -= t.profit;
+                }
+            });
+
+            document.getElementById('revenue-month').textContent = Utils.formatCurrency(revenue);
+            document.getElementById('cost-month').textContent = Utils.formatCurrency(cost);
+            document.getElementById('profit-month').textContent = Utils.formatCurrency(profit);
+            document.getElementById('total-tx').textContent = txs.length;
+
+            const tableBody = document.querySelector('#recent-tx-table tbody');
+            const recent = txs.slice(-5).reverse();
+            
+            if (recent.length === 0) {
+                const currentTheme = ThemeEngine.getCurrent();
+                const icon = currentTheme === 'kuromi' ? Icons.kuromi : Icons.melody;
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="3" style="text-align:center; padding: 3rem; color: var(--text-muted);">
+                            <div style="width: 50px; margin: 0 auto 1rem; opacity: 0.3;">${icon}</div>
+                            ไม่มีรายการธุรกรรม
+                        </td>
+                    </tr>`;
+            } else {
+                tableBody.innerHTML = recent.map(t => `
+                    <tr>
+                        <td>
+                            <div style="font-weight:700;">${t.appName}</div>
+                            <div style="font-size:0.7rem; color: var(--text-muted);">${Utils.formatDate(t.date)}</div>
+                        </td>
+                        <td><span class="badge badge-${t.category.split('_')[1] || t.category}">${t.category.replace('subscription_', '')}</span></td>
+                        <td style="color: ${t.profit >= 0 ? 'var(--success)' : 'var(--error)'}; font-weight: 700;">
+                            ${t.profit >= 0 ? '+' : ''}${Utils.formatCurrency(t.profit)}
+                        </td>
+                    </tr>
+                `).join('');
+            }
+
+            renderChart(txs);
+        }
+
+        function renderChart(txs) {
+            const canvas = document.getElementById('profitChart');
+            const ctx = canvas.getContext('2d');
+            const theme = ThemeEngine.getCurrent();
+            const primaryColor = theme === 'kuromi' ? '#C9B1FF' : '#FF8FAB';
+            
+            const labels = [];
+            const data = [];
+            for (let i = 6; i >= 0; i--) {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                const dateStr = d.toISOString().split('T')[0];
+                labels.push(d.toLocaleDateString('th-TH', { weekday: 'short' }));
+                const dailyProfit = txs.filter(t => t.date.split('T')[0] === dateStr)
+                                      .reduce((sum, t) => sum + t.profit, 0);
+                data.push(dailyProfit);
+            }
+
+            const width = canvas.offsetWidth;
+            const height = canvas.offsetHeight;
+            canvas.width = width;
+            canvas.height = height;
+
+            const padding = 40;
+            const chartWidth = width - (padding * 2);
+            const chartHeight = height - (padding * 2);
+
+            const maxVal = Math.max(...data, 100) * 1.2;
+            const minVal = Math.min(...data, 0) * 1.2;
+            const range = maxVal - minVal;
+
+            ctx.strokeStyle = '#EEEEEE';
+            ctx.beginPath();
+            ctx.moveTo(padding, padding);
+            ctx.lineTo(padding, height - padding);
+            ctx.lineTo(width - padding, height - padding);
+            ctx.stroke();
+
+            ctx.strokeStyle = primaryColor;
+            ctx.lineWidth = 4;
+            ctx.lineJoin = 'round';
+            ctx.beginPath();
+
+            data.forEach((val, i) => {
+                const x = padding + (i * (chartWidth / 6));
+                const y = (height - padding) - ((val - minVal) / range * chartHeight);
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+                
+                ctx.fillStyle = primaryColor;
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(x, y, 5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+
+                ctx.fillStyle = '#777777';
+                ctx.font = 'bold 10px Nunito';
+                ctx.fillText(labels[i], x - 10, height - padding + 20);
+            });
+            ctx.stroke();
+
+            const grad = ctx.createLinearGradient(0, 0, 0, height);
+            grad.addColorStop(0, `${primaryColor}44`);
+            grad.addColorStop(1, 'transparent');
+            ctx.fillStyle = grad;
+            ctx.lineTo(padding + chartWidth, height - padding);
+            ctx.lineTo(padding, height - padding);
+            ctx.fill();
+        }
+    </script>
+</body>
+</html>

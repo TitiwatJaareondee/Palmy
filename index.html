@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เข้าสู่ระบบ | Pormormovi3</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="assets/css/responsive.css">
+</head>
+<body class="login-page">
+    <div class="login-card card fade-in" id="login-container">
+        <div class="login-header">
+            <div id="dual-logo-container"></div>
+            <h2>Pormormovi3</h2>
+            <p style="color: var(--text-muted); font-size: 0.9rem;">Reseller Shop Management</p>
+        </div>
+
+        <form id="login-form" style="margin-top: 2rem;">
+            <div class="input-group">
+                <label for="username">ชื่อผู้ใช้งาน</label>
+                <input type="text" id="username" placeholder="Username" required>
+            </div>
+            
+            <div class="input-group">
+                <label for="password">รหัสผ่าน</label>
+                <div class="password-toggle">
+                    <input type="password" id="password" placeholder="Password" required>
+                    <button type="button" class="toggle-btn" id="show-password">👁️</button>
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; font-size: 0.85rem;">
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="checkbox" id="remember-me" style="width: auto;"> จำฉันไว้ในระบบ
+                </label>
+                <a href="#" id="forgot-password" style="color: var(--primary); text-decoration: none; font-weight: 700;">ลืมรหัสผ่าน?</a>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width: 100%;">เข้าสู่ระบบ</button>
+        </form>
+
+        <div style="margin-top: 2rem;">
+            <button class="theme-toggle-btn" id="login-theme-toggle" style="margin: 0 auto;"></button>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="assets/js/db.js"></script>
+    <script src="assets/js/icons.js"></script>
+    <script src="assets/js/theme-engine.js"></script>
+    <script src="assets/js/utils.js"></script>
+    <script src="assets/js/auth.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const loginForm = document.getElementById('login-form');
+            const loginContainer = document.getElementById('login-container');
+            const showPassBtn = document.getElementById('show-password');
+            const passwordInput = document.getElementById('password');
+            const themeToggle = document.getElementById('login-theme-toggle');
+            const logoContainer = document.getElementById('dual-logo-container');
+
+            // Inject Logo
+            logoContainer.innerHTML = Icons.logo;
+
+            // Theme Toggle Setup
+            const updateThemeButton = () => {
+                const current = ThemeEngine.getCurrent();
+                themeToggle.innerHTML = current === 'kuromi' ? '🖤 Switch to Melody' : '🩷 Switch to Kuromi';
+            };
+            updateThemeButton();
+
+            themeToggle.onclick = () => {
+                ThemeEngine.toggle();
+                updateThemeButton();
+            };
+
+            // Check if already logged in
+            if (sessionStorage.getItem('kuromi_session')) {
+                window.location.href = 'dashboard.html';
+            }
+
+            // Password visibility toggle
+            showPassBtn.addEventListener('click', () => {
+                const isPass = passwordInput.type === 'password';
+                passwordInput.type = isPass ? 'text' : 'password';
+                showPassBtn.textContent = isPass ? '🔒' : '👁️';
+            });
+
+            // Handle login
+            loginForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const username = document.getElementById('username').value;
+                const password = passwordInput.value;
+                const rememberMe = document.getElementById('remember-me').checked;
+
+                try {
+                    const success = await Auth.login(username, password, rememberMe);
+                    if (success) {
+                        Utils.toast('เข้าสู่ระบบสำเร็จ กำลังพาคุณไปที่หน้าหลัก...', 'success');
+                        setTimeout(() => window.location.href = 'dashboard.html', 1000);
+                    }
+                } catch (error) {
+                    loginContainer.classList.add('shake');
+                    Utils.toast(error.message, 'error');
+                    setTimeout(() => loginContainer.classList.remove('shake'), 500);
+                }
+            });
+
+            // Forgot password mock
+            document.getElementById('forgot-password').addEventListener('click', (e) => {
+                e.preventDefault();
+                Utils.toast('กรุณาติดต่อผู้ดูแลระบบเพื่อรีเซ็ตรหัสผ่าน', 'error');
+            });
+        });
+    </script>
+</body>
+</html>

@@ -10,7 +10,7 @@ const login = async (req, res) => {
   }
 
   try {
-    const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username);
+    const user = await db.getPromise('SELECT * FROM users WHERE username = ?', [username]);
 
     if (!user || !(await bcrypt.compare(password, user.password_hash))) {
       return res.status(401).json({ message: 'Invalid credentials' });

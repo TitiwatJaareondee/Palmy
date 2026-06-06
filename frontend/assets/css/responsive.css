@@ -46,12 +46,29 @@
     .top-nav {
         flex-direction: column;
         align-items: flex-start;
-        gap: 1rem;
-        padding-bottom: 1.5rem;
+        gap: 1.5rem;
+        padding-bottom: 2rem;
+    }
+
+    .top-nav-actions {
+        width: 100%;
+        justify-content: space-between;
     }
 
     .top-nav h2 {
-        font-size: 1.5rem;
+        font-size: 1.8rem;
+    }
+
+    .user-name {
+        display: none;
+    }
+
+    .user-role {
+        display: none;
+    }
+
+    .user-control {
+        padding: 5px;
     }
 
     /* Modern Bottom Navigation for Mobile */

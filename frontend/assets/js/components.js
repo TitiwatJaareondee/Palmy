@@ -21,7 +21,7 @@ const Components = (() => {
                 ${Icons.logo}
                 <div style="margin-left: 10px;">
                     <h3>${settings.shopName}</h3>
-                    <p style="font-size: 0.65rem; color: var(--primary);">DUAL THEME ACTIVE</p>
+                    <p style="font-size: 0.65rem; color: var(--primary);">SYSTEM ONLINE</p>
                 </div>
             </div>
             <ul class="nav-links">
@@ -50,11 +50,6 @@ const Components = (() => {
                     </a>
                 </li>
             </ul>
-            <div style="margin-top: auto; padding: 1rem;">
-                <button onclick="Auth.logout()" class="btn btn-secondary" style="width: 100%; font-size: 0.8rem;">
-                    ออกจากระบบ
-                </button>
-            </div>
         `;
 
         // 2. Top Nav
@@ -62,20 +57,27 @@ const Components = (() => {
         const topNav = document.createElement('nav');
         topNav.className = 'top-nav';
         topNav.innerHTML = `
-            <div>
+            <div class="page-info">
                 <h2 id="page-title">${getPageTitle(currentPage)}</h2>
                 <p style="font-size: 0.8rem; color: var(--text-muted);">${Utils.formatDate(new Date(), { dateStyle: 'full' })}</p>
             </div>
-            <div style="display: flex; align-items: center; gap: 20px;">
-                <button class="theme-toggle-btn" id="global-theme-toggle">
-                    ${currentTheme === 'kuromi' ? '🖤 Kuromi Mode' : '🩷 Melody Mode'}
+            <div class="top-nav-actions">
+                <button class="theme-switch" id="global-theme-toggle" title="สลับโหมด">
+                    <div class="switch-dot"></div>
+                    <span class="switch-label">${currentTheme === 'kuromi' ? '🖤' : '🩷'}</span>
                 </button>
-                <div class="user-profile">
-                    <div class="user-info" style="text-align: right;">
-                        <p style="font-weight: 700; font-size: 0.9rem;">${session?.username || 'Admin'}</p>
-                        <p style="font-size: 0.75rem; color: var(--text-muted);">ผู้ดูแลระบบ</p>
+                
+                <div class="user-control">
+                    <div class="user-profile">
+                        <div class="user-info">
+                            <p class="user-name">${session?.username || 'Admin'}</p>
+                            <p class="user-role">ผู้ดูแลระบบ</p>
+                        </div>
+                        <div class="avatar">${(session?.username?.[0] || 'A').toUpperCase()}</div>
                     </div>
-                    <div class="avatar">${(session?.username?.[0] || 'A').toUpperCase()}</div>
+                    <button onclick="Auth.logout()" class="logout-btn" title="ออกจากระบบ">
+                        ${Icons.logout || '🚪'}
+                    </button>
                 </div>
             </div>
         `;

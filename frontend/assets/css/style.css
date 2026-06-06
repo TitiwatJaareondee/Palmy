@@ -287,6 +287,146 @@ tr:hover td {
     box-shadow: 0 4px 15px rgba(108, 92, 231, 0.2);
 }
 
+/* Top Nav & User Controls */
+.top-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 2.5rem;
+}
+
+.top-nav-actions {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+/* Beautiful Theme Switch */
+.theme-switch {
+    position: relative;
+    width: 60px;
+    height: 30px;
+    background: var(--sidebar-bg);
+    border: none;
+    border-radius: 30px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    padding: 3px;
+    transition: var(--transition);
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+}
+
+[data-theme="melody"] .theme-switch {
+    background: var(--primary);
+}
+
+.switch-dot {
+    width: 24px;
+    height: 24px;
+    background: white;
+    border-radius: 50%;
+    transition: var(--transition);
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+[data-theme="melody"] .switch-dot {
+    transform: translateX(30px);
+}
+
+.switch-label {
+    position: absolute;
+    right: 8px;
+    font-size: 12px;
+}
+
+[data-theme="melody"] .switch-label {
+    right: auto;
+    left: 8px;
+}
+
+.user-control {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--card-bg);
+    padding: 5px 5px 5px 15px;
+    border-radius: 40px;
+    box-shadow: var(--shadow);
+}
+
+.user-info {
+    text-align: right;
+}
+
+.user-name {
+    font-weight: 800;
+    font-size: 0.85rem;
+    margin-bottom: -3px;
+}
+
+.user-role {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    font-weight: 700;
+}
+
+.avatar {
+    width: 32px;
+    height: 32px;
+    background: var(--primary);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 0.8rem;
+}
+
+.logout-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: none;
+    background: #FEE2E2;
+    color: #EF4444;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+}
+
+.logout-btn:hover {
+    background: #EF4444;
+    color: white;
+    transform: scale(1.1);
+}
+
+/* Button & Action Effects */
+.btn:active, .nav-link:active, .fab:active, .theme-switch:active, .logout-btn:active {
+    transform: scale(0.95);
+}
+
+.btn:hover, .fab:hover {
+    filter: brightness(1.1);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+}
+
+/* Animations */
+.fade-in {
+    animation: fadeIn 0.4s cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(15px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
 /* Stats Grid & Charts */
 .stats-grid {
     display: grid;
@@ -301,18 +441,6 @@ tr:hover td {
     gap: 2rem;
 }
 
-/* Animations */
-.fade-in {
-    animation: fadeIn 0.6s cubic-bezier(0.23, 1, 0.32, 1) both;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-/* Mobile Adjustments handled in responsive.css, 
-   but base tweaks for better flow */
 @media (max-width: 1024px) {
     .dashboard-grid {
         grid-template-columns: 1fr;

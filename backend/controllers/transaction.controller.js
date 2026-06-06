@@ -67,4 +67,16 @@ const deleteTransaction = async (req, res) => {
   }
 };
 
-module.exports = { getTransactions, createTransaction, deleteTransaction };
+const clearTransactions = async (req, res) => {
+  const userId = req.user.id;
+
+  try {
+    await db.preparePromise('DELETE FROM transactions WHERE user_id = ?', [userId]);
+    res.json({ message: 'All transactions cleared' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+module.exports = { getTransactions, createTransaction, deleteTransaction, clearTransactions };

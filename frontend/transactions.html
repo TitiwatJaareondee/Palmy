@@ -250,9 +250,8 @@
         }
 
         document.getElementById('clear-all-btn').addEventListener('click', () => {
-            Utils.toast('ฟีเจอร์ล้างทั้งหมดกำลังปิดปรับปรุงชั่วคราว', 'warning');
-            // pendingDeleteId = 'all';
-            // showConfirm('ล้างรายการ "ทั้งหมด"? ทุกข้อมูลจะหายไปถาวร');
+            pendingDeleteId = 'all';
+            showConfirm('ล้างรายการ "ทั้งหมด"? ทุกข้อมูลจะหายไปถาวร');
         });
 
         function showConfirm(msg) {
@@ -263,15 +262,16 @@
         document.getElementById('confirm-cancel').onclick = () => document.getElementById('confirm-modal').style.display = 'none';
 
         document.getElementById('confirm-ok').onclick = async () => {
-            if (pendingDeleteId === 'all') {
-                // Not implemented yet on backend for safety
-            } else {
-                try {
+            try {
+                if (pendingDeleteId === 'all') {
+                    await api.delete('/transactions');
+                    Utils.toast('ล้างข้อมูลทั้งหมดแล้ว', 'success');
+                } else {
                     await api.delete(`/transactions/${pendingDeleteId}`);
                     Utils.toast('ลบรายการสำเร็จ', 'success');
-                } catch (err) {
-                    Utils.toast('เกิดข้อผิดพลาด', 'error');
                 }
+            } catch (err) {
+                Utils.toast('เกิดข้อผิดพลาด', 'error');
             }
             document.getElementById('confirm-modal').style.display = 'none';
             await loadTransactions();

@@ -7,6 +7,7 @@ router.use(authMiddleware);
 
 router.get('/', transactionController.getTransactions);
 router.post('/', transactionController.createTransaction);
+router.delete('/', transactionController.clearTransactions);
 router.delete('/:id', transactionController.deleteTransaction);
 
 module.exports = router;

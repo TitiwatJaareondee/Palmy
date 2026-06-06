@@ -1,14 +1,12 @@
 const { Pool } = require('pg');
 const path = require('path');
-require('dotenv').config();
+const envConfig = require('dotenv').config({ override: true }).parsed || {};
+const dbUrl = envConfig.DATABASE_URL || process.env.DATABASE_URL;
 
-let db;
-
-if (process.env.DATABASE_URL) {
-  // --- PRODUCTION: PostgreSQL (Supabase) ---
+if (dbUrl) {
   console.log('Connecting to PostgreSQL (Supabase)...');
   db = new Pool({
-    connectionString: process.env.DATABASE_URL,
+    connectionString: dbUrl,
     ssl: { rejectUnauthorized: false }
   });
 

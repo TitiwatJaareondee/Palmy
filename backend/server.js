@@ -3,7 +3,7 @@ const path = require('path');
 const cors = require('cors');
 const helmet = require('helmet');
 const cookieParser = require('cookie-parser');
-require('dotenv').config();
+require('dotenv').config({ override: true });
 
 const app = express();
 

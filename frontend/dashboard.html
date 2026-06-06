@@ -67,6 +67,7 @@
     </div>
 
     <!-- Scripts -->
+    <script src="assets/js/api.js"></script>
     <script src="assets/js/db.js"></script>
     <script src="assets/js/icons.js"></script>
     <script src="assets/js/theme-engine.js"></script>
@@ -74,76 +75,81 @@
     <script src="assets/js/auth.js"></script>
     <script src="assets/js/components.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            Auth.checkSession();
+        document.addEventListener('DOMContentLoaded', async () => {
+            await Auth.checkSession();
             Components.injectLayout();
-            loadDashboardData();
+            await loadDashboardData();
         });
 
-        function loadDashboardData() {
-            const txs = DB.transactions.getAll();
-            const now = new Date();
-            const thisMonth = now.getMonth();
-            const thisYear = now.getFullYear();
+        async function loadDashboardData() {
+            try {
+                const txs = await api.get('/transactions');
+                const now = new Date();
+                const thisMonth = now.getMonth();
+                const thisYear = now.getFullYear();
 
-            const monthTxs = txs.filter(t => {
-                const d = new Date(t.date);
-                return d.getMonth() === thisMonth && d.getFullYear() === thisYear;
-            });
+                const monthTxs = txs.filter(t => {
+                    const d = new Date(t.date);
+                    return d.getMonth() === thisMonth && d.getFullYear() === thisYear;
+                });
 
-            let revenue = 0, cost = 0, profit = 0;
-            monthTxs.forEach(t => {
-                if (t.category === 'subscription_sale') {
-                    revenue += (t.sellingPrice * t.quantity);
-                    cost += (t.costPrice * t.quantity);
-                    profit += t.profit;
-                } else if (t.category === 'expense') {
-                    cost += (t.costPrice * t.quantity);
-                    profit -= (t.costPrice * t.quantity);
-                } else if (t.category === 'refund') {
-                    revenue -= (t.sellingPrice * t.quantity);
-                    profit -= t.profit;
+                let revenue = 0, cost = 0, profit = 0;
+                monthTxs.forEach(t => {
+                    if (t.category === 'subscription_sale') {
+                        revenue += (t.selling_price * t.quantity);
+                        cost += (t.cost_price * t.quantity);
+                        profit += t.profit;
+                    } else if (t.category === 'expense') {
+                        cost += (t.cost_price * t.quantity);
+                        profit -= (t.cost_price * t.quantity);
+                    } else if (t.category === 'refund') {
+                        revenue -= (t.selling_price * t.quantity);
+                        profit -= t.profit;
+                    }
+                });
+
+                document.getElementById('revenue-month').textContent = Utils.formatCurrency(revenue);
+                document.getElementById('cost-month').textContent = Utils.formatCurrency(cost);
+                document.getElementById('profit-month').textContent = Utils.formatCurrency(profit);
+                document.getElementById('total-tx').textContent = txs.length;
+
+                const tableBody = document.querySelector('#recent-tx-table tbody');
+                const recent = txs.slice(0, 5); // Backend already returns ordered by date desc
+                
+                if (recent.length === 0) {
+                    const currentTheme = ThemeEngine.getCurrent();
+                    const icon = currentTheme === 'kuromi' ? Icons.kuromi : Icons.melody;
+                    tableBody.innerHTML = `
+                        <tr>
+                            <td colspan="3" style="text-align:center; padding: 3rem; color: var(--text-muted);">
+                                <div style="width: 50px; margin: 0 auto 1rem; opacity: 0.3;">${icon}</div>
+                                ไม่มีรายการธุรกรรม
+                            </td>
+                        </tr>`;
+                } else {
+                    tableBody.innerHTML = recent.map(t => `
+                        <tr>
+                            <td>
+                                <div style="font-weight:700;">${t.app_name}</div>
+                                <div style="font-size:0.7rem; color: var(--text-muted);">${Utils.formatDate(t.date)}</div>
+                            </td>
+                            <td><span class="badge badge-${t.category.split('_')[1] || t.category}">${t.category.replace('subscription_', '')}</span></td>
+                            <td style="color: ${t.profit >= 0 ? 'var(--success)' : 'var(--error)'}; font-weight: 700;">
+                                ${t.profit >= 0 ? '+' : ''}${Utils.formatCurrency(t.profit)}
+                            </td>
+                        </tr>
+                    `).join('');
                 }
-            });
 
-            document.getElementById('revenue-month').textContent = Utils.formatCurrency(revenue);
-            document.getElementById('cost-month').textContent = Utils.formatCurrency(cost);
-            document.getElementById('profit-month').textContent = Utils.formatCurrency(profit);
-            document.getElementById('total-tx').textContent = txs.length;
-
-            const tableBody = document.querySelector('#recent-tx-table tbody');
-            const recent = txs.slice(-5).reverse();
-            
-            if (recent.length === 0) {
-                const currentTheme = ThemeEngine.getCurrent();
-                const icon = currentTheme === 'kuromi' ? Icons.kuromi : Icons.melody;
-                tableBody.innerHTML = `
-                    <tr>
-                        <td colspan="3" style="text-align:center; padding: 3rem; color: var(--text-muted);">
-                            <div style="width: 50px; margin: 0 auto 1rem; opacity: 0.3;">${icon}</div>
-                            ไม่มีรายการธุรกรรม
-                        </td>
-                    </tr>`;
-            } else {
-                tableBody.innerHTML = recent.map(t => `
-                    <tr>
-                        <td>
-                            <div style="font-weight:700;">${t.appName}</div>
-                            <div style="font-size:0.7rem; color: var(--text-muted);">${Utils.formatDate(t.date)}</div>
-                        </td>
-                        <td><span class="badge badge-${t.category.split('_')[1] || t.category}">${t.category.replace('subscription_', '')}</span></td>
-                        <td style="color: ${t.profit >= 0 ? 'var(--success)' : 'var(--error)'}; font-weight: 700;">
-                            ${t.profit >= 0 ? '+' : ''}${Utils.formatCurrency(t.profit)}
-                        </td>
-                    </tr>
-                `).join('');
+                renderChart(txs);
+            } catch (err) {
+                console.error('Failed to load dashboard data:', err);
             }
-
-            renderChart(txs);
         }
 
         function renderChart(txs) {
             const canvas = document.getElementById('profitChart');
+            if (!canvas) return;
             const ctx = canvas.getContext('2d');
             const theme = ThemeEngine.getCurrent();
             const primaryColor = theme === 'kuromi' ? '#C9B1FF' : '#FF8FAB';
@@ -171,7 +177,7 @@
 
             const maxVal = Math.max(...data, 100) * 1.2;
             const minVal = Math.min(...data, 0) * 1.2;
-            const range = maxVal - minVal;
+            const range = Math.max(maxVal - minVal, 1);
 
             ctx.strokeStyle = '#EEEEEE';
             ctx.beginPath();

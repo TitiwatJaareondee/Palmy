@@ -15,10 +15,15 @@ const getTransactions = async (req, res) => {
 
     query += ' ORDER BY date DESC, created_at DESC';
 
-    db.all(query, params, (err, rows) => {
-      if (err) throw err;
-      res.json(rows);
-    });
+    const rows = await db.allPromise(query, params);
+    
+    // Calculate profit for each transaction if it's not a virtual column (e.g. in Postgres)
+    const processedRows = rows.map(row => ({
+        ...row,
+        profit: row.profit !== undefined ? row.profit : (row.selling_price * row.quantity) - (row.cost_price * row.quantity)
+    }));
+
+    res.json(processedRows);
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });

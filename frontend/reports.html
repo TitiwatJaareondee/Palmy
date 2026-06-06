@@ -101,6 +101,7 @@
     </div>
 
     <!-- Scripts -->
+    <script src="assets/js/api.js"></script>
     <script src="assets/js/db.js"></script>
     <script src="assets/js/icons.js"></script>
     <script src="assets/js/theme-engine.js"></script>
@@ -110,82 +111,86 @@
     <script>
         let currentPeriod = 'daily';
         
-        document.addEventListener('DOMContentLoaded', () => {
-            Auth.checkSession();
+        document.addEventListener('DOMContentLoaded', async () => {
+            await Auth.checkSession();
             Components.injectLayout();
             setupTabs();
-            loadReport();
+            await loadReport();
             document.getElementById('export-csv').onclick = exportToCSV;
         });
 
         function setupTabs() {
             const tabs = document.querySelectorAll('.tab-btn');
             tabs.forEach(tab => {
-                tab.onclick = () => {
+                tab.onclick = async () => {
                     tabs.forEach(t => t.classList.remove('active'));
                     tab.classList.add('active');
                     currentPeriod = tab.dataset.period;
-                    loadReport();
+                    await loadReport();
                 };
             });
         }
 
-        function loadReport() {
-            const txs = DB.transactions.getAll();
-            const now = new Date();
-            const filtered = txs.filter(t => {
-                const d = new Date(t.date);
-                if (currentPeriod === 'daily') return d.toDateString() === now.toDateString();
-                if (currentPeriod === 'weekly') { const weekAgo = new Date(); weekAgo.setDate(now.getDate() - 7); return d >= weekAgo; }
-                if (currentPeriod === 'monthly') return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-                if (currentPeriod === 'yearly') return d.getFullYear() === now.getFullYear();
-                return true;
-            });
+        async function loadReport() {
+            try {
+                const txs = await api.get('/transactions');
+                const now = new Date();
+                const filtered = txs.filter(t => {
+                    const d = new Date(t.date);
+                    if (currentPeriod === 'daily') return d.toDateString() === now.toDateString();
+                    if (currentPeriod === 'weekly') { const weekAgo = new Date(); weekAgo.setDate(now.getDate() - 7); return d >= weekAgo; }
+                    if (currentPeriod === 'monthly') return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+                    if (currentPeriod === 'yearly') return d.getFullYear() === now.getFullYear();
+                    return true;
+                });
 
-            const groups = {};
-            let totalRev = 0, totalCost = 0, totalProfit = 0;
+                const groups = {};
+                let totalRev = 0, totalCost = 0, totalProfit = 0;
 
-            filtered.forEach(t => {
-                if (!groups[t.appName]) groups[t.appName] = { count: 0, qty: 0, revenue: 0, cost: 0, profit: 0 };
-                const g = groups[t.appName];
-                g.count++;
-                if (t.category === 'subscription_sale') {
-                    const rev = t.sellingPrice * t.quantity;
-                    const cost = t.costPrice * t.quantity;
-                    g.qty += t.quantity; g.revenue += rev; g.cost += cost; g.profit += t.profit;
-                    totalRev += rev; totalCost += cost; totalProfit += t.profit;
-                } else if (t.category === 'expense') {
-                    const cost = t.costPrice * t.quantity;
-                    g.cost += cost; g.profit -= cost;
-                    totalCost += cost; totalProfit -= cost;
-                } else if (t.category === 'refund') {
-                    const rev = t.sellingPrice * t.quantity;
-                    g.revenue -= rev; g.profit -= t.profit;
-                    totalRev -= rev; totalProfit -= t.profit;
+                filtered.forEach(t => {
+                    if (!groups[t.app_name]) groups[t.app_name] = { count: 0, qty: 0, revenue: 0, cost: 0, profit: 0 };
+                    const g = groups[t.app_name];
+                    g.count++;
+                    if (t.category === 'subscription_sale') {
+                        const rev = t.selling_price * t.quantity;
+                        const cost = t.cost_price * t.quantity;
+                        g.qty += t.quantity; g.revenue += rev; g.cost += cost; g.profit += t.profit;
+                        totalRev += rev; totalCost += cost; totalProfit += t.profit;
+                    } else if (t.category === 'expense') {
+                        const cost = t.cost_price * t.quantity;
+                        g.cost += cost; g.profit -= cost;
+                        totalCost += cost; totalProfit -= cost;
+                    } else if (t.category === 'refund') {
+                        const rev = t.selling_price * t.quantity;
+                        g.revenue -= rev; g.profit -= t.profit;
+                        totalRev -= rev; totalProfit -= t.profit;
+                    }
+                });
+
+                document.getElementById('rep-revenue').textContent = Utils.formatCurrency(totalRev);
+                document.getElementById('rep-cost').textContent = Utils.formatCurrency(totalCost);
+                document.getElementById('rep-profit').textContent = Utils.formatCurrency(totalProfit);
+
+                const sortedApps = Object.entries(groups).sort((a, b) => b[1].revenue - a[1].revenue);
+                document.getElementById('rep-best-app').textContent = sortedApps[0] ? sortedApps[0][0] : '-';
+
+                const tbody = document.querySelector('#report-table tbody');
+                if (sortedApps.length === 0) {
+                    const icon = ThemeEngine.getCurrent() === 'kuromi' ? Icons.kuromi : Icons.melody;
+                    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 4rem; color: var(--text-muted);"><div style="width: 60px; margin: 0 auto 1.5rem; opacity: 0.2;">${icon}</div>ไม่พบข้อมูลในช่วงเวลานี้</td></tr>`;
+                } else {
+                    tbody.innerHTML = sortedApps.map(([name, g], index) => `
+                        <tr>
+                            <td style="font-weight: 700;">${index === 0 ? '<span class="best-seller-badge">BEST SELLER</span> ' : ''}${name}</td>
+                            <td>${g.count}</td>
+                            <td>${g.qty}</td>
+                            <td>${Utils.formatCurrency(g.revenue)}</td>
+                            <td>${Utils.formatCurrency(g.cost)}</td>
+                            <td style="font-weight: 800; color: ${g.profit >= 0 ? 'var(--success)' : 'var(--error)'};">${Utils.formatCurrency(g.profit)}</td>
+                        </tr>`).join('');
                 }
-            });
-
-            document.getElementById('rep-revenue').textContent = Utils.formatCurrency(totalRev);
-            document.getElementById('rep-cost').textContent = Utils.formatCurrency(totalCost);
-            document.getElementById('rep-profit').textContent = Utils.formatCurrency(totalProfit);
-
-            const sortedApps = Object.entries(groups).sort((a, b) => b[1].revenue - a[1].revenue);
-            document.getElementById('rep-best-app').textContent = sortedApps[0] ? sortedApps[0][0] : '-';
-
-            const tbody = document.querySelector('#report-table tbody');
-            if (sortedApps.length === 0) {
-                const icon = ThemeEngine.getCurrent() === 'kuromi' ? Icons.kuromi : Icons.melody;
-                tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 4rem; color: var(--text-muted);"><div style="width: 60px; margin: 0 auto 1.5rem; opacity: 0.2;">${icon}</div>ไม่พบข้อมูลในช่วงเวลานี้</td></tr>`;
-            } else {
-                tbody.innerHTML = sortedApps.map(([name, g], index) => `
-                    <tr>
-                        <td style="font-weight: 700;">${index === 0 ? '<span class="best-seller-badge">BEST SELLER</span> ' : ''}${name}</td>
-                        <td>${g.count}</td>
-                        <td>${g.qty}</td>
-                        <td>${Utils.formatCurrency(g.revenue)}</td>
-                        <td>${Utils.formatCurrency(g.cost)}</td>
-                        <td style="font-weight: 800; color: ${g.profit >= 0 ? 'var(--success)' : 'var(--error)'};">${Utils.formatCurrency(g.profit)}</td>
-                    </tr>`).join('');
+            } catch (err) {
+                console.error('Failed to load report:', err);
             }
         }
 

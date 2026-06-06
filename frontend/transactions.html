@@ -114,6 +114,7 @@
     </div>
 
     <!-- Scripts -->
+    <script src="assets/js/api.js"></script>
     <script src="assets/js/db.js"></script>
     <script src="assets/js/icons.js"></script>
     <script src="assets/js/theme-engine.js"></script>
@@ -121,11 +122,11 @@
     <script src="assets/js/auth.js"></script>
     <script src="assets/js/components.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            Auth.checkSession();
+        document.addEventListener('DOMContentLoaded', async () => {
+            await Auth.checkSession();
             Components.injectLayout();
             initForm();
-            loadTransactions();
+            await loadTransactions();
             setupShortcuts();
             
             // Inject Modal Icon
@@ -165,9 +166,9 @@
                 calc();
             }
 
-            form.addEventListener('submit', (e) => {
+            form.addEventListener('submit', async (e) => {
                 e.preventDefault();
-                saveTransaction();
+                await saveTransaction();
             });
         }
 
@@ -178,58 +179,65 @@
             localStorage.setItem('tx_draft', JSON.stringify(draft));
         }
 
-        function saveTransaction() {
+        async function saveTransaction() {
             const tx = {
-                appName: document.getElementById('appName').value,
+                app_name: document.getElementById('appName').value,
                 category: document.getElementById('category').value,
-                sellingPrice: parseFloat(document.getElementById('sellingPrice').value),
-                costPrice: parseFloat(document.getElementById('costPrice').value),
+                selling_price: parseFloat(document.getElementById('sellingPrice').value),
+                cost_price: parseFloat(document.getElementById('costPrice').value),
                 quantity: parseInt(document.getElementById('quantity').value),
                 date: document.getElementById('date').value,
-                note: document.getElementById('note').value,
-                createdBy: JSON.parse(sessionStorage.getItem('kuromi_session')).username
+                note: document.getElementById('note').value
             };
 
-            DB.transactions.add(tx);
-            Utils.toast('บันทึกรายการสำเร็จ', 'success');
-            localStorage.removeItem('tx_draft');
-            document.getElementById('tx-form').reset();
-            document.getElementById('date').valueAsDate = new Date();
-            document.getElementById('live-profit').textContent = '฿0.00';
-            loadTransactions();
+            try {
+                await api.post('/transactions', tx);
+                Utils.toast('บันทึกรายการสำเร็จ', 'success');
+                localStorage.removeItem('tx_draft');
+                document.getElementById('tx-form').reset();
+                document.getElementById('date').valueAsDate = new Date();
+                document.getElementById('live-profit').textContent = '฿0.00';
+                await loadTransactions();
+            } catch (err) {
+                Utils.toast('เกิดข้อผิดพลาดในการบันทึก', 'error');
+            }
         }
 
-        function loadTransactions() {
-            const txs = DB.transactions.getAll();
-            const searchTerm = document.getElementById('search-tx').value.toLowerCase();
-            const tableBody = document.querySelector('#tx-table tbody');
-            const filtered = txs.filter(t => t.appName.toLowerCase().includes(searchTerm)).reverse();
+        async function loadTransactions() {
+            try {
+                const txs = await api.get('/transactions');
+                const searchTerm = document.getElementById('search-tx').value.toLowerCase();
+                const tableBody = document.querySelector('#tx-table tbody');
+                const filtered = txs.filter(t => t.app_name.toLowerCase().includes(searchTerm));
 
-            if (filtered.length === 0) {
-                const icon = ThemeEngine.getCurrent() === 'kuromi' ? Icons.kuromi : Icons.melody;
-                tableBody.innerHTML = `
-                    <tr>
-                        <td colspan="7" style="text-align:center; padding: 4rem; color: var(--text-muted);">
-                            <div style="width: 60px; margin: 0 auto 1.5rem; opacity: 0.2;">${icon}</div>
-                            ไม่พบรายการธุรกรรม
-                        </td>
-                    </tr>`;
-            } else {
-                tableBody.innerHTML = filtered.map(t => `
-                    <tr>
-                        <td style="font-size: 0.8rem; color: var(--text-muted);">${Utils.formatDate(t.date)}</td>
-                        <td style="font-weight: 700;">${t.appName}</td>
-                        <td><span class="badge badge-${t.category.split('_')[1] || t.category}">${t.category.replace('subscription_', '')}</span></td>
-                        <td>${Utils.formatCurrency(t.sellingPrice)}</td>
-                        <td>${Utils.formatCurrency(t.costPrice)}</td>
-                        <td style="font-weight: 800; color: ${t.profit >= 0 ? 'var(--primary-dark)' : 'var(--error)'};">
-                            ${Utils.formatCurrency(t.profit)}
-                        </td>
-                        <td>
-                            <button onclick="deleteTx('${t.id}')" class="btn" style="padding: 6px 12px; font-size: 0.75rem; background: var(--bg); color: var(--error); border: 1px solid var(--error);">ลบ</button>
-                        </td>
-                    </tr>
-                `).join('');
+                if (filtered.length === 0) {
+                    const icon = ThemeEngine.getCurrent() === 'kuromi' ? Icons.kuromi : Icons.melody;
+                    tableBody.innerHTML = `
+                        <tr>
+                            <td colspan="7" style="text-align:center; padding: 4rem; color: var(--text-muted);">
+                                <div style="width: 60px; margin: 0 auto 1.5rem; opacity: 0.2;">${icon}</div>
+                                ไม่พบรายการธุรกรรม
+                            </td>
+                        </tr>`;
+                } else {
+                    tableBody.innerHTML = filtered.map(t => `
+                        <tr>
+                            <td style="font-size: 0.8rem; color: var(--text-muted);">${Utils.formatDate(t.date)}</td>
+                            <td style="font-weight: 700;">${t.app_name}</td>
+                            <td><span class="badge badge-${t.category.split('_')[1] || t.category}">${t.category.replace('subscription_', '')}</span></td>
+                            <td>${Utils.formatCurrency(t.selling_price)}</td>
+                            <td>${Utils.formatCurrency(t.cost_price)}</td>
+                            <td style="font-weight: 800; color: ${t.profit >= 0 ? 'var(--primary-dark)' : 'var(--error)'};">
+                                ${Utils.formatCurrency(t.profit)}
+                            </td>
+                            <td>
+                                <button onclick="deleteTx('${t.id}')" class="btn" style="padding: 6px 12px; font-size: 0.75rem; background: var(--bg); color: var(--error); border: 1px solid var(--error);">ลบ</button>
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+            } catch (err) {
+                console.error(err);
             }
         }
 
@@ -242,8 +250,9 @@
         }
 
         document.getElementById('clear-all-btn').addEventListener('click', () => {
-            pendingDeleteId = 'all';
-            showConfirm('ล้างรายการ "ทั้งหมด"? ทุกข้อมูลจะหายไปถาวร');
+            Utils.toast('ฟีเจอร์ล้างทั้งหมดกำลังปิดปรับปรุงชั่วคราว', 'warning');
+            // pendingDeleteId = 'all';
+            // showConfirm('ล้างรายการ "ทั้งหมด"? ทุกข้อมูลจะหายไปถาวร');
         });
 
         function showConfirm(msg) {
@@ -253,16 +262,19 @@
 
         document.getElementById('confirm-cancel').onclick = () => document.getElementById('confirm-modal').style.display = 'none';
 
-        document.getElementById('confirm-ok').onclick = () => {
+        document.getElementById('confirm-ok').onclick = async () => {
             if (pendingDeleteId === 'all') {
-                DB.transactions.clearAll();
-                Utils.toast('ล้างข้อมูลทั้งหมดแล้ว', 'success');
+                // Not implemented yet on backend for safety
             } else {
-                DB.transactions.delete(pendingDeleteId);
-                Utils.toast('ลบรายการสำเร็จ', 'success');
+                try {
+                    await api.delete(`/transactions/${pendingDeleteId}`);
+                    Utils.toast('ลบรายการสำเร็จ', 'success');
+                } catch (err) {
+                    Utils.toast('เกิดข้อผิดพลาด', 'error');
+                }
             }
             document.getElementById('confirm-modal').style.display = 'none';
-            loadTransactions();
+            await loadTransactions();
         };
 
         function setupShortcuts() {
